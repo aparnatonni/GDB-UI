@@ -235,17 +235,17 @@ def get_locals():
         start_gdb_session(f'{file}')
 
     try:
-        result = execute_gdb_command("info functions")
+        result = execute_gdb_command("info locals")
         response = {
             'success': True,
             'result': result,
-            'code': "execute_gdb_command('info functions')"
+            'code': "execute_gdb_command('info locals')"
         }
     except Exception as e:
         response = {
             'success': False,
             'error': str(e),
-            'code': "execute_gdb_command('info functions')"
+            'code': "execute_gdb_command('info locals')"
         }
     
     return jsonify(response)
