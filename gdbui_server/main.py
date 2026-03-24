@@ -48,45 +48,76 @@ def start_gdb_session(program):
 @app.route('/gdb_command', methods=['POST'])
 def gdb_command():
     global program_name
-    data = request.get_json()
-    command = data.get('command')
-    file = data.get('name')
-    if program_name != file:
-        start_gdb_session(f'{file}')
-
+    
+    # Input validation
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        command = data.get('command', '').strip()
+        file = data.get('name', '').strip()
+        
+        if not command:
+            return jsonify({'error': 'Command cannot be empty', 'status': 400}), 400
+        if not file:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # GDB execution with proper error handling
+    try:
+        if program_name != file:
+            start_gdb_session(f'{file}')
+        
         result = execute_gdb_command(command)
-        response = {
+        return jsonify({
             'success': True,
             'result': result,
             'code': f"execute_gdb_command('{command}')"
-        }
+        }), 200
+    
     except Exception as e:
-        response = {
+        return jsonify({
             'success': False,
             'error': str(e),
-            'code': f"execute_gdb_command('{command}')"
-        }
-    
-    return jsonify(response)
+            'status': 500
+        }), 500
 
 @app.route('/compile', methods=['POST'])
 def compile_code():
     global program_name
-    data = request.get_json()
-    code = data.get('code')
-    name = data.get('name')
+    
+    # Input validation
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        code = data.get('code', '').strip()
+        name = data.get('name', '').strip()
+        
+        if not code:
+            return jsonify({'error': 'Code cannot be empty', 'status': 400}), 400
+        if not name:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # Compile with error handling
+    try:
+        with open(f'{name}.cpp', 'w') as file:
+            file.write(code)
 
-    with open(f'{name}.cpp', 'w') as file:
-        file.write(code)
+        result = subprocess.run(['g++', f'{name}.cpp', '-o', f'output/{name}.exe'], capture_output=True, text=True)
 
-    result = subprocess.run(['g++', f'{name}.cpp', '-o', f'output/{name}.exe'], capture_output=True, text=True)
-
-    if result.returncode == 0:
-        program_name = None
-        return jsonify({'success': True, 'output': 'Compilation successful.'})
-    else:
-        return jsonify({'success': False, 'output': result.stderr})
+        if result.returncode == 0:
+            program_name = None
+            return jsonify({'success': True, 'output': 'Compilation successful.'}), 200
+        else:
+            return jsonify({'success': False, 'output': result.stderr, 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e), 'status': 500}), 500
 
 @app.route('/upload_file', methods=['POST'])    
 def upload_file():
@@ -108,195 +139,285 @@ def upload_file():
 @app.route('/set_breakpoint', methods=['POST'])
 def set_breakpoint():
     global program_name
-    data = request.get_json()
-    location = data.get('location')
-    file = data.get('name')
-    if program_name != file:
-        start_gdb_session(f'{file}')
-
+    
+    # Input validation
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        location = data.get('location', '').strip()
+        file = data.get('name', '').strip()
+        
+        if not location:
+            return jsonify({'error': 'Breakpoint location cannot be empty', 'status': 400}), 400
+        if not file:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # GDB execution with proper error handling
+    try:
+        if program_name != file:
+            start_gdb_session(f'{file}')
+        
         result = execute_gdb_command(f"break {location}")
-        response = {
+        return jsonify({
             'success': True,
             'result': result,
             'code': f"execute_gdb_command('break {location}')"
-        }
+        }), 200
     except Exception as e:
-        response = {
+        return jsonify({
             'success': False,
             'error': str(e),
-            'code': f"execute_gdb_command('break {location}')"
-        }
-    
-    return jsonify(response)
+            'status': 500
+        }), 500
 
 @app.route('/info_breakpoints', methods=['POST'])
 def info_breakpoints():
     global program_name
-    data = request.get_json()
-    file = data.get('name')
-    if program_name != file:
-        start_gdb_session(f'{file}')
-
+    
+    # Input validation
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        file = data.get('name', '').strip()
+        
+        if not file:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # GDB execution with proper error handling
+    try:
+        if program_name != file:
+            start_gdb_session(f'{file}')
+        
         result = execute_gdb_command("info breakpoints")
-        response = {
+        return jsonify({
             'success': True,
             'result': result,
             'code': "execute_gdb_command('info breakpoints')"
-        }
+        }), 200
     except Exception as e:
-        response = {
+        return jsonify({
             'success': False,
             'error': str(e),
-            'code': "execute_gdb_command('info breakpoints')"
-        }
-    
-    return jsonify(response)
+            'status': 500
+        }), 500
 
 @app.route('/stack_trace', methods=['POST'])
 def stack_trace():
     global program_name
-    data = request.get_json()
-    file = data.get('name')
-    if program_name != file:
-        start_gdb_session(f'{file}')
-
+    
+    # Input validation
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        file = data.get('name', '').strip()
+        
+        if not file:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # GDB execution with proper error handling
+    try:
+        if program_name != file:
+            start_gdb_session(f'{file}')
+        
         result = execute_gdb_command("bt")
-        response = {
+        return jsonify({
             'success': True,
             'result': result,
             'code': "execute_gdb_command('bt')"
-        }
+        }), 200
     except Exception as e:
-        response = {
+        return jsonify({
             'success': False,
             'error': str(e),
-            'code': "execute_gdb_command('bt')"
-        }
-    
-    return jsonify(response)
+            'status': 500
+        }), 500
 
 @app.route('/threads', methods=['POST'])
 def threads():
     global program_name
-    data = request.get_json()
-    file = data.get('name')
-    if program_name != file:
-        start_gdb_session(f'{file}')
-
+    
+    # Input validation
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        file = data.get('name', '').strip()
+        
+        if not file:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # GDB execution with proper error handling
+    try:
+        if program_name != file:
+            start_gdb_session(f'{file}')
+        
         result = execute_gdb_command("info threads")
-        response = {
+        return jsonify({
             'success': True,
             'result': result,
             'code': "execute_gdb_command('info threads')"
-        }
+        }), 200
     except Exception as e:
-        response = {
+        return jsonify({
             'success': False,
             'error': str(e),
-            'code': "execute_gdb_command('info threads')"
-        }
-    
-    return jsonify(response)
+            'status': 500
+        }), 500
 
 @app.route('/get_registers', methods=['POST'])
 def get_registers():
     global program_name
-    data = request.get_json()
-    file = data.get('name')
-    if program_name != file:
-        start_gdb_session(f'{file}')
-
+    
+    # Input validation
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        file = data.get('name', '').strip()
+        
+        if not file:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # GDB execution with proper error handling
+    try:
+        if program_name != file:
+            start_gdb_session(f'{file}')
+        
         result = execute_gdb_command("info registers")
-        response = {
+        return jsonify({
             'success': True,
             'result': result,
             'code': "execute_gdb_command('info registers')"
-        }
+        }), 200
     except Exception as e:
-        response = {
+        return jsonify({
             'success': False,
             'error': str(e),
-            'code': "execute_gdb_command('info registers')"
-        }
-    
-    return jsonify(response)
+            'status': 500
+        }), 500
 
 @app.route('/get_locals', methods=['POST'])
 def get_locals():
     global program_name
-    data = request.get_json()
-    file = data.get('name')
-    if program_name != file:
-        start_gdb_session(f'{file}')
-
+    
+    # Input validation
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        file = data.get('name', '').strip()
+        
+        if not file:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # GDB execution with proper error handling
+    try:
+        if program_name != file:
+            start_gdb_session(f'{file}')
+        
         result = execute_gdb_command("info locals")
-        response = {
+        return jsonify({
             'success': True,
             'result': result,
             'code': "execute_gdb_command('info locals')"
-        }
+        }), 200
     except Exception as e:
-        response = {
+        return jsonify({
             'success': False,
             'error': str(e),
-            'code': "execute_gdb_command('info locals')"
-        }
-    
-    return jsonify(response)
+            'status': 500
+        }), 500
 
 @app.route('/run', methods=['POST'])
 def run_program():
     global program_name
-    data = request.get_json()
-    file = data.get('name')
-    if program_name != file:
-        start_gdb_session(f'{file}')
-
+    
+    # Input validation
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        file = data.get('name', '').strip()
+        
+        if not file:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # GDB execution with proper error handling
+    try:
+        if program_name != file:
+            start_gdb_session(f'{file}')
+        
         result = execute_gdb_command("run")
-        response = {
+        return jsonify({
             'success': True,
             'result': result,
             'code': "execute_gdb_command('run')"
-        }
+        }), 200
     except Exception as e:
-        response = {
+        return jsonify({
             'success': False,
             'error': str(e),
-            'code': "execute_gdb_command('run')"
-        }
-    
-    return jsonify(response)
+            'status': 500
+        }), 500
 
 @app.route('/memory_map', methods=['POST'])
 def memory_map():
     global program_name
-    data = request.get_json()
-    file = data.get('name')
-    if program_name != file:
-        start_gdb_session(f'{file}')
-
+    
+    # Input validation
     try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body must be JSON', 'status': 400}), 400
+        
+        file = data.get('name', '').strip()
+        
+        if not file:
+            return jsonify({'error': 'File name cannot be empty', 'status': 400}), 400
+    except Exception as e:
+        return jsonify({'error': f'Invalid request: {str(e)}', 'status': 400}), 400
+    
+    # GDB execution with proper error handling
+    try:
+        if program_name != file:
+            start_gdb_session(f'{file}')
+        
         result = execute_gdb_command("info proc mappings")
-        response = {
+        return jsonify({
             'success': True,
             'result': result,
             'code': "execute_gdb_command('info proc mappings')"
-        }
+        }), 200
     except Exception as e:
-        response = {
+        return jsonify({
             'success': False,
             'error': str(e),
-            'code': "execute_gdb_command('info proc mappings')"
-        }
-    
-    return jsonify(response)
+            'status': 500
+        }), 500
 
 @app.route('/continue', methods=['POST'])
 def continue_execution():
