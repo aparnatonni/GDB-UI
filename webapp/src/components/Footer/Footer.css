@@ -1,0 +1,8 @@
+.footer-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 30px;
+  background-color: var(--footer-background-color);
+  color: var(--footer-color); /* If you want to set text color */
+}
